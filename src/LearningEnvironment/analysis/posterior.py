@@ -1,20 +1,20 @@
-def extract_user_parameters(trace):
-    """
-    Extract and flatten posterior samples
-    from hierarchical Bayesian model.
+    
+    # Extract and flatten all posterior samples
+    # from the hierarchical Bayesian memory model.
 
-    Returns
-    -------
-    alpha_user_samples : (samples, users)
-    beta_user_samples  : (samples, users)
-    """
+def extract_posterior_samples(trace, n_users, n_items):
 
-    alpha = trace.posterior["alpha_user"].values
-    beta  = trace.posterior["beta_user"].values
+    # alpha_u : ndarray, shape (samples, n_users) and so on...
+    alpha_u = trace.posterior["alpha_user"].values
+    beta_u  = trace.posterior["beta_user"].values
+    alpha_i = trace.posterior["alpha_item"].values
+    beta_i  = trace.posterior["beta_item"].values
 
-    chains, draws, n_users = alpha.shape
+    chains, draws, _ = alpha_u.shape
 
-    alpha = alpha.reshape(-1, n_users)
-    beta  = beta.reshape(-1, n_users)
+    alpha_u = alpha_u.reshape(-1, n_users)
+    beta_u  = beta_u.reshape(-1,  n_users)
+    alpha_i = alpha_i.reshape(-1, n_items)
+    beta_i  = beta_i.reshape(-1,  n_items)
 
-    return alpha, beta
+    return alpha_u, beta_u, alpha_i, beta_i

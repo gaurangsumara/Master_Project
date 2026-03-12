@@ -4,7 +4,8 @@ import pytensor.tensor as pt
 import matplotlib.pyplot as plt 
 from scipy.stats import gaussian_kde
 import arviz as az
-from LearningEnvironment.analysis.posterior import extract_user_parameters 
+from LearningEnvironment.analysis.posterior import extract_posterior_samples
+from sklearn.metrics import roc_auc_score
 def hierarchical_memory_model(
     user_ids,
     item_ids,
@@ -216,9 +217,9 @@ def comparision_between_users(n_users, alpha_user_samples):
             label=f"user {u}"
         )
 
-        plt.legend()
-        plt.title("Comparison between users")
-        plt.show()
+    plt.legend()
+    plt.title("Comparison between users")
+    plt.show()
 
 #posterior scatter plot for all users
 def users_scatter_plot(n_users, alpha_user_samples, beta_user_samples):
@@ -240,7 +241,7 @@ def users_scatter_plot(n_users, alpha_user_samples, beta_user_samples):
         plt.show()
 
 #trace plot for sampling behavior
-def show_scatter_plot(n_users,alpha_user_samples, beta_user_samples):
+def show_trace_plot(n_users,alpha_user_samples, beta_user_samples):
     for u in range(n_users):
 
         plt.figure(figsize=(12,4))
@@ -255,3 +256,121 @@ def show_scatter_plot(n_users,alpha_user_samples, beta_user_samples):
 
         plt.show()
 
+
+#metrics
+def roc_auc_curve(omega, dt, n, user_ids, item_ids,
+                  alpha_u, beta_u, alpha_i, beta_i):
+
+    p_mean_predictions = []
+
+    for k in range(len(omega)):
+
+        u       = user_ids[k]
+        i       = item_ids[k]
+        dt_k    = dt[k]        # ← use dt_k instead of dt
+        n_k     = n[k]         # ← use n_k  instead of n
+
+        # combine user and item parameters
+        alpha_ui = (alpha_u[:, u] + alpha_i[:, i]) / 2
+        beta_ui  = (beta_u[:, u]  + beta_i[:, i])  / 2
+
+        # per-sample recall probability
+        p_samples = np.exp(
+            -alpha_ui
+            * (1 - beta_ui) ** max(n_k - 1, 0)
+            * dt_k
+        )
+
+        # average across all posterior samples
+        p_mean_predictions.append(np.mean(p_samples))
+
+    p_mean_predictions = np.array(p_mean_predictions)
+
+    auc = roc_auc_score(omega, p_mean_predictions)
+    brier = np.mean((p_mean_predictions - omega)**2)
+    print(f"Brier Score: {brier:.4f}") 
+    
+    return auc
+
+def log_predictive_density(omega, dt, n, user_ids, item_ids,
+                  alpha_u, beta_u, alpha_i, beta_i):
+
+    log_probs = []
+
+    for k in range(len(omega)):
+        u, i = user_ids[k], item_ids[k]
+        dt_k, n_k, omega_k = dt[k], n[k], omega[k]
+
+        # per-sample recall probability
+        alpha_ui = (alpha_u[:, u] + alpha_i[:, i]) / 2
+        beta_ui  = (beta_u[:, u]  + beta_i[:, i])  / 2
+        p = np.exp(-alpha_ui * (1 - beta_ui)** max(n_k-1, 0) * dt_k)
+        p = np.clip(p, 1e-6, 1 - 1e-6)
+
+        # Bernoulli log-likelihood per sample, then average
+        if omega_k == 1:
+            lp = np.log(np.mean(p))
+        else:
+            lp = np.log(np.mean(1 - p))
+
+        log_probs.append(lp)
+
+    return np.sum(log_probs)
+
+def binary_accuracy(alpha_u,beta_u,alpha_i,beta_i, test_data):
+    # compute posterior mean recall probability
+
+
+    correct = 0
+    for k in range(len(test_data)):
+        u, i, dt, n, omega = test_data[k]
+
+        alpha_ui = (alpha_u[:, u] + alpha_i[:, i]) / 2
+        beta_ui  = (beta_u[:, u]  + beta_i[:, i])  / 2
+        p = np.exp(-alpha_ui * (1 - beta_ui)**max(n-1, 0) * dt)
+
+        p_mean = np.mean(p)
+        pred   = 1 if p_mean > 0.5 else 0
+
+        if pred == omega:
+            correct += 1
+
+    return correct / len(test_data)
+
+
+def binary_accuracy(omega, dt, n, user_ids, item_ids,
+                    alpha_u, beta_u, alpha_i, beta_i):
+ 
+
+    p_mean_predictions = []
+
+    for k in range(len(omega)):
+
+        u    = user_ids[k]
+        i    = item_ids[k]
+        dt_k = dt[k]
+        n_k  = n[k]
+
+        # combine user and item parameters
+        alpha_ui = (alpha_u[:, u] + alpha_i[:, i]) / 2
+        beta_ui  = (beta_u[:, u]  + beta_i[:, i])  / 2
+
+        # per-sample recall probability
+        p_samples = np.exp(
+            -alpha_ui
+            * (1 - beta_ui) ** max(n_k - 1, 0)
+            * dt_k
+        )
+
+        # average across all posterior samples
+        p_mean_predictions.append(np.mean(p_samples))
+
+    p_mean_predictions = np.array(p_mean_predictions)
+
+    # threshold at 0.5 to get binary predictions
+    predicted_labels = (p_mean_predictions > 0.5).astype(int)
+
+    # fraction of correct predictions
+    accuracy = np.mean(predicted_labels == np.array(omega))
+
+    return accuracy, predicted_labels, p_mean_predictions
