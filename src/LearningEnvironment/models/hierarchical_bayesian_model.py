@@ -3,8 +3,6 @@ import numpy as np
 import pytensor.tensor as pt
 import matplotlib.pyplot as plt 
 from scipy.stats import gaussian_kde
-import arviz as az
-from LearningEnvironment.analysis.posterior import extract_posterior_samples
 from sklearn.metrics import roc_auc_score
 def hierarchical_memory_model(
     user_ids,
@@ -257,9 +255,8 @@ def show_trace_plot(n_users,alpha_user_samples, beta_user_samples):
         plt.show()
 
 
-#metrics
-def roc_auc_curve(omega, dt, n, user_ids, item_ids,
-                  alpha_u, beta_u, alpha_i, beta_i):
+# Evaluation metrics
+def roc_auc_curve(omega, dt, n, user_ids, item_ids, alpha_u, beta_u, alpha_i, beta_i):
 
     p_mean_predictions = []
 
@@ -267,8 +264,8 @@ def roc_auc_curve(omega, dt, n, user_ids, item_ids,
 
         u       = user_ids[k]
         i       = item_ids[k]
-        dt_k    = dt[k]        # ← use dt_k instead of dt
-        n_k     = n[k]         # ← use n_k  instead of n
+        dt_k    = dt[k]        
+        n_k     = n[k]         
 
         # combine user and item parameters
         alpha_ui = (alpha_u[:, u] + alpha_i[:, i]) / 2
@@ -292,9 +289,8 @@ def roc_auc_curve(omega, dt, n, user_ids, item_ids,
     
     return auc
 
-def log_predictive_density(omega, dt, n, user_ids, item_ids,
-                  alpha_u, beta_u, alpha_i, beta_i):
 
+def log_predictive_density(omega, dt, n, user_ids, item_ids, alpha_u, beta_u, alpha_i, beta_i):
     log_probs = []
 
     for k in range(len(omega)):
@@ -319,8 +315,6 @@ def log_predictive_density(omega, dt, n, user_ids, item_ids,
 
 def binary_accuracy(alpha_u,beta_u,alpha_i,beta_i, test_data):
     # compute posterior mean recall probability
-
-
     correct = 0
     for k in range(len(test_data)):
         u, i, dt, n, omega = test_data[k]
@@ -338,29 +332,22 @@ def binary_accuracy(alpha_u,beta_u,alpha_i,beta_i, test_data):
     return correct / len(test_data)
 
 
-def binary_accuracy(omega, dt, n, user_ids, item_ids,
-                    alpha_u, beta_u, alpha_i, beta_i):
- 
-
+def binary_accuracy(omega, dt, n, user_ids, item_ids, alpha_u, beta_u, alpha_i, beta_i):
     p_mean_predictions = []
 
     for k in range(len(omega)):
 
-        u    = user_ids[k]
-        i    = item_ids[k]
+        u= user_ids[k]
+        i= item_ids[k]
         dt_k = dt[k]
-        n_k  = n[k]
+        n_k= n[k]
 
         # combine user and item parameters
         alpha_ui = (alpha_u[:, u] + alpha_i[:, i]) / 2
         beta_ui  = (beta_u[:, u]  + beta_i[:, i])  / 2
 
         # per-sample recall probability
-        p_samples = np.exp(
-            -alpha_ui
-            * (1 - beta_ui) ** max(n_k - 1, 0)
-            * dt_k
-        )
+        p_samples = np.exp( -alpha_ui  * (1 - beta_ui) ** max(n_k - 1, 0)* dt_k )
 
         # average across all posterior samples
         p_mean_predictions.append(np.mean(p_samples))

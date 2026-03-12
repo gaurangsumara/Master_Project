@@ -5,10 +5,10 @@ import arviz as az
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 from LearningEnvironment.models.bayesian_model import base_model
 from LearningEnvironment.models.inference import inference
-from LearningEnvironment.models.hierarchical_bayesian_model import hierarchical_memory_model,show_density_plot, roc_auc_curve,users_scatter_plot, log_predictive_density, binary_accuracy
+from LearningEnvironment.models.hierarchical_bayesian_model import hierarchical_memory_model, roc_auc_curve,log_predictive_density, binary_accuracy
 from LearningEnvironment.analysis.posterior import extract_posterior_samples
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
+
 def generate_data():
     np.random.seed(42)
 
@@ -71,41 +71,41 @@ def run_experiment():
     # refer to hierarchical_bayesian_model.py file for more information.
     alpha_samples, beta_samples, alpha_item_samples, beta_item_samples = extract_posterior_samples(trace, n_users, n_items)
     auc = roc_auc_curve(
-    omega      = omega,
-    dt         = dt,
-    n          = n,
-    user_ids   = user_ids,
-    item_ids   = item_ids,
-    alpha_u    = alpha_samples,
-    beta_u     = beta_samples,
-    alpha_i    = alpha_item_samples,
-    beta_i     = beta_item_samples
+    omega = omega,
+    dt = dt,
+    n  = n,
+    user_ids = user_ids,
+    item_ids= item_ids,
+    alpha_u= alpha_samples,
+    beta_u = beta_samples,
+    alpha_i = alpha_item_samples,
+    beta_i = beta_item_samples
    )
 
     print(f"ROC AUC Score: {auc:.4f} ")
     log_predictive_density_socre =log_predictive_density( 
     omega= omega,
-    dt         = dt,
-    n          = n,
-    user_ids   = user_ids,
-    item_ids   = item_ids,
-    alpha_u    = alpha_samples,
-    beta_u     = beta_samples,
-    alpha_i    = alpha_item_samples,
-    beta_i     = beta_item_samples
+    dt= dt,
+    n = n,
+    user_ids = user_ids,
+    item_ids= item_ids,
+    alpha_u  = alpha_samples,
+    beta_u = beta_samples,
+    alpha_i  = alpha_item_samples,
+    beta_i  = beta_item_samples
     )
 
     print(f"Log predictive density: {log_predictive_density_socre / len(omega)} ")
 
     accuracy, predicted_labels, p_mean = binary_accuracy(omega= omega,
-    dt         = dt,
-    n          = n,
-    user_ids   = user_ids,
-    item_ids   = item_ids,
-    alpha_u    = alpha_samples,
-    beta_u     = beta_samples,
-    alpha_i    = alpha_item_samples,
-    beta_i     = beta_item_samples
+    dt  = dt,
+    n = n,
+    user_ids = user_ids,
+    item_ids = item_ids,
+    alpha_u  = alpha_samples,
+    beta_u = beta_samples,
+    alpha_i = alpha_item_samples,
+    beta_i  = beta_item_samples
     )
     
     print(f"Binary Accuracy: {accuracy:.4f} ")
